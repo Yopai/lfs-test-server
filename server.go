@@ -73,12 +73,16 @@ func NewApp(content *ContentStore, meta *MetaStore) *App {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/{user}/{repo}/objects/batch", app.BatchHandler).Methods("POST").MatcherFunc(MetaMatcher)
+
 	route := "/{user}/{repo}/objects/{oid}"
 	r.HandleFunc(route, app.GetContentHandler).Methods("GET", "HEAD").MatcherFunc(ContentMatcher)
 	r.HandleFunc(route, app.GetMetaHandler).Methods("GET", "HEAD").MatcherFunc(MetaMatcher)
 	r.HandleFunc(route, app.PutHandler).Methods("PUT").MatcherFunc(ContentMatcher)
+	r.HandleFunc(route, app.BadRequestHandler)
 
-	r.HandleFunc("/{user}/{repo}/objects", app.PostHandler).Methods("POST").MatcherFunc(MetaMatcher)
+	route = "/{user}/{repo}/objects"
+	r.HandleFunc(route, app.PostHandler).Methods("POST").MatcherFunc(MetaMatcher)
+	r.HandleFunc(route, app.BadRequestHandler)
 
 	app.addMgmt(r)
 
@@ -100,6 +104,12 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Serve calls http.Serve with the provided Listener and the app's router
 func (a *App) Serve(l net.Listener) error {
 	return http.Serve(l, a)
+}
+
+// Send a 'Bad request' response rather than a 404 one
+func (a *App) BadRequestHandler(w http.ResponseWriter, r *http.Request) {
+	writeStatus(w, r, 406);
+	return
 }
 
 // GetContentHandler gets the content from the content store
